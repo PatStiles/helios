@@ -349,6 +349,85 @@ impl<R: ExecutionRpc> ExecutionClient<R> {
         Ok(logs)
     }
 
+    pub async fn get_filter_changes(
+        &self, 
+        filter_id: &U256,
+        payloads: &BTreeMap<u64, ExecutionPayload>,
+    ) -> Result<Vec<Log>> {
+        let logs = self.rpc.get_filter_changes(&filter_id).await?;
+        if logs.len() > MAX_SUPPORTED_LOGS_NUMBER {
+            return Err(
+                ExecutionError::TooManyLogsToProve(logs.len(), MAX_SUPPORTED_LOGS_NUMBER).into(),
+            );
+        }
+
+        for (_pos, log) in logs.iter().enumerate() {
+            // For every log
+            // Get the hash of the tx that generated it
+            let tx_hash = log
+                .transaction_hash
+                .ok_or(eyre::eyre!("tx hash not found in log"))?;
+            // Get its proven receipt
+            let receipt = self
+                .get_transaction_receipt(&tx_hash, payloads)
+                .await?
+                .ok_or(ExecutionError::NoReceiptForTransaction(tx_hash.to_string()))?;
+
+            // Check if the receipt contains the desired log
+            // Encoding logs for comparison
+            let receipt_logs_encoded = receipt
+                .logs
+                .iter()
+                .map(|log| log.rlp_bytes())
+                .collect::<Vec<_>>();
+
+            let log_encoded = log.rlp_bytes();
+
+            if !receipt_logs_encoded.contains(&log_encoded) {
+                return Err(ExecutionError::MissingLog(
+                    tx_hash.to_string(),
+                    log.log_index.unwrap(),
+                )
+                .into());
+            }
+        }
+        Ok(logs)
+    }
+
+    pub async fn uninstall_filter(&self, filter_id: &U256) -> Result<bool> {
+        self.rpc.uninstall_filter(filter_id).await
+    }
+
+    pub async fn get_new_filter(
+        &self, 
+        filter: &Filter,
+        payloads: &BTreeMap<u64, ExecutionPayload>,
+    ) -> Result<U256> {
+        let filter = filter.clone();
+
+        // avoid creating a filter for logs for a block helios hasn't seen yet
+        let filter = if filter.get_to_block().is_none() && filter.get_block_hash().is_none() {
+            let block = *payloads.last_key_value().unwrap().0;
+            let filter = filter.to_block(block);
+            if filter.get_from_block().is_none() {
+                filter.from_block(block)
+            } else {
+                filter
+            }
+        } else {
+            filter
+        };
+        self.rpc.get_new_filter(&filter).await
+    }
+
+    pub async fn get_new_block_filter(&self) -> Result<U256> {
+        self.rpc.get_new_block_filter().await
+    }
+
+    pub async fn get_new_pending_transaction_filter(&self) -> Result<U256> {
+        self.rpc.get_new_pending_transaction_filter().await
+    }
+
     pub async fn get_fee_history(
         &self,
         block_count: u64,

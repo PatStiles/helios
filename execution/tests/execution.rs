@@ -131,6 +131,11 @@ async fn test_get_logs() {
 }
 
 #[tokio::test]
+async fn test_get_filter_logs() {
+    todo!();
+}
+
+#[tokio::test]
 async fn test_get_receipt() {
     let execution = get_client();
     let tx_hash =

@@ -110,6 +110,16 @@ trait EthRpc {
     ) -> Result<Option<Transaction>, Error>;
     #[method(name = "getLogs")]
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, Error>;
+    #[method(name = "getFilterChanges")]
+    async fn get_filter_changes(&self, filter_id: U256) -> Result<Vec<Log>, Error>;
+    #[method(name = "uninstallFilter")]
+    async fn uninstall_filter(&self, filter_id: U256) -> Result<bool, Error>;
+    #[method(name = "getNewFilter")]
+    async fn get_new_filter(&self, filter: Filter) -> Result<U256, Error>;
+    #[method(name = "getNewBlockFilter")]
+    async fn get_new_block_filter(&self) -> Result<U256, Error>;
+    #[method(name = "getNewPendingTransactionFilter")]
+    async fn get_new_pending_transaction_filter(&self) -> Result<U256, Error>;
     #[method(name = "getStorageAt")]
     async fn get_storage_at(
         &self,
@@ -293,6 +303,30 @@ impl EthRpcServer for RpcInner {
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, Error> {
         let node = self.node.read().await;
         convert_err(node.get_logs(&filter).await)
+    }
+
+    async fn get_filter_changes(&self, filter_id: U256) -> Result<Vec<Log>, Error> {
+        convert_err(self.node.read().await.get_filter_changes(&filter_id).await)
+    }
+
+    async fn uninstall_filter(&self, filter_id: U256) -> Result<bool, Error> {
+        let node = self.node.read().await;
+        convert_err(node.uninstall_filter(&filter_id).await)
+    }
+
+    async fn get_new_filter(&self, filter: Filter) -> Result<U256, Error> {
+        let node = self.node.read().await;
+        convert_err(node.get_new_filter(&filter).await)
+    }
+
+    async fn get_new_block_filter(&self) -> Result<U256, Error> {
+        let node = self.node.read().await;
+        convert_err(node.get_new_block_filter().await)
+    }
+
+    async fn get_new_pending_transaction_filter(&self) -> Result<U256, Error> {
+        let node = self.node.read().await;
+        convert_err(node.get_new_pending_transaction_filter().await)
     }
 
     async fn get_storage_at(

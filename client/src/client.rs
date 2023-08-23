@@ -380,6 +380,26 @@ impl Client {
         self.node.read().await.get_logs(filter).await
     }
 
+    pub async fn get_filter_changes(&self, filter_id: &U256) -> Result<bool> {
+        self.node.read().await.uninstall_filter(filter_id).await
+    }
+
+    pub async fn uninstall_filter(&self, filter_id: &U256) -> Result<bool> {
+        self.node.read().await.uninstall_filter(filter_id).await
+    }
+
+    pub async fn get_new_filter(&self, filter: &Filter) -> Result<U256> {
+        self.node.read().await.get_new_filter(filter).await
+    }
+
+    pub async fn get_new_block_filter(&self) -> Result<U256> {
+        self.node.read().await.get_new_block_filter().await
+    }
+
+    pub async fn get_new_pending_transaction_filter(&self) -> Result<U256> {
+        self.node.read().await.get_new_pending_transaction_filter().await
+    }
+
     pub async fn get_gas_price(&self) -> Result<U256> {
         self.node.read().await.get_gas_price()
     }
